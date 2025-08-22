@@ -9,7 +9,7 @@ Mainly for checking file integrity after a backup or file transfer.
 
 Originally, I just needed a simple way to check that my files were still intact — especially for personal backups of movies and TV shows stored on external drives.
 
-After a few disk issues, I started generating hashes for remuxed files to verify their integrity over time.
+After a few disk issues, I started generating hashes for my remuxed movies to verify their integrity over time.
 At first, it was just for my own use, but I figured it could be helpful more broadly, and for any kind of file.
 
 So I decided to turn it into a small desktop app: simple, flexible, and focused on doing one thing well.
