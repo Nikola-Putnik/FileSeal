@@ -66,23 +66,31 @@ public class MainWindow extends JFrame {
 
             String algo = (String) hashTypeComboBox.getSelectedItem();
 
-            File[] files = selectedFolder.listFiles();
-            if (files == null || files.length == 0) {
-                log("No files found in the folder.");
+            java.util.List<File> filesToHash = getAllFilesWithExtension(selectedFolder, extension);
+            if (filesToHash.isEmpty()) {
+                log("No matching files found.");
                 return;
             }
 
-            for (File file : files) {
+            for (File file : filesToHash) {
                 if (file.isFile() && file.getName().toLowerCase().endsWith(extension)) {
                     try {
-                        String hash = computeHash(file, algo);
                         String hashExtension = algo.toLowerCase().replace("-", "");
                         String hashFilename = file.getAbsolutePath() + "." + hashExtension;
                         File hashFile = new File(hashFilename);
+
+                        // skips if hash already exists
+                        if (hashFile.exists()) {
+                            log("Skipped (already exists): " + hashFile.getName());
+                            continue;
+                        }
+
+                        String hash = computeHash(file, algo);
+
                         try (java.io.FileWriter fw = new java.io.FileWriter(hashFile)) {
                             fw.write(algo.toUpperCase() + ": " + hash + "  " + file.getName());
                         }
-                        log("OK : " + file.getName() + " → " + hash);
+                        log(file.getName() + " → " + hash);
                     } catch (Exception ex) {
                         log("Error processing : " + file.getName() + ": " + ex.getMessage());
                     }
@@ -92,7 +100,55 @@ public class MainWindow extends JFrame {
 
         // "Verify hashes" button action
         verifyButton.addActionListener((ActionEvent e) -> {
-            log("TO-DO");
+            if (selectedFolder == null || !selectedFolder.isDirectory()) {
+                log("No folder selected.");
+                return;
+            }
+
+            java.util.List<File> hashFiles = getAllHashFiles(selectedFolder);
+            if (hashFiles.isEmpty()) {
+                log("No hash files found (.md5, .sha1, .sha256).");
+                return;
+            }
+
+            for (File file : hashFiles) {
+                if (file.isFile() && (file.getName().endsWith(".md5") || file.getName().endsWith(".sha256") || file.getName().endsWith(".sha1"))) {
+                    try {
+                        java.util.List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
+                        if (lines.isEmpty()) {
+                            log("Empty hash file: " + file.getName());
+                            continue;
+                        }
+
+                        String line = lines.get(0).trim();
+                        String[] parts = line.split("[: ]+", 3);
+                        if (parts.length < 3) {
+                            log("Invalid format in: " + file.getName());
+                            continue;
+                        }
+
+                        String algo = parts[0]; // MD5, SHA-256,..
+                        String expectedHash = parts[1];
+                        String originalFilename = parts[2];
+
+                        File originalFile = new File(file.getParentFile(), originalFilename);
+                        if (!originalFile.exists()) {
+                            log("Missing file: " + originalFilename);
+                            continue;
+                        }
+
+                        String actualHash = computeHash(originalFile, algo);
+                        if (expectedHash.equalsIgnoreCase(actualHash)) {
+                            log(originalFilename + " is OK.");
+                        } else {
+                            log(originalFilename + " is corrupted or different.");
+                        }
+
+                    } catch (Exception ex) {
+                        log("Error verifying " + file.getName() + ": " + ex.getMessage());
+                    }
+                }
+            }
         });
 
         gbc.gridx = 0; gbc.gridy = 0;
@@ -150,6 +206,44 @@ public class MainWindow extends JFrame {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    // Get all files with a given extension (e.g. '.mkv') in a folder and its subfolders
+    private java.util.List<File> getAllFilesWithExtension(File folder, String extension) {
+        java.util.List<File> result = new java.util.ArrayList<>();
+        File[] files = folder.listFiles();
+        if (files == null) return result;
+
+        for (File file : files) {
+            if (file.isDirectory()) {
+                result.addAll(getAllFilesWithExtension(file, extension));
+            } else if (file.getName().toLowerCase().endsWith(extension.toLowerCase())) {
+                result.add(file);
+            }
+        }
+
+        return result;
+    }
+
+    // Get all hash files (.md5,.sha256,...) in a folder and its subfolders
+    private java.util.List<File> getAllHashFiles(File folder) {
+        java.util.List<File> result = new java.util.ArrayList<>();
+        File[] files = folder.listFiles();
+        if (files == null) return result;
+
+        for (File file : files) {
+            if (file.isDirectory()) {
+                result.addAll(getAllHashFiles(file));
+            } else if (
+                    file.getName().endsWith(".md5") ||
+                            file.getName().endsWith(".sha1") ||
+                            file.getName().endsWith(".sha256")
+            ) {
+                result.add(file);
+            }
+        }
+
+        return result;
     }
 
 }
