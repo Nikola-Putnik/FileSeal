@@ -10,7 +10,8 @@ public class MainWindow extends JFrame {
     private JTextField extensionField;
     private JComboBox<String> hashTypeComboBox;
     private JTextArea logArea;
-    private File selectedFolder; // Dossier sélectionné
+    private File selectedFolder;
+    private JProgressBar progressBar;
 
     public MainWindow() {
         setTitle("FileSeal");
@@ -65,37 +66,61 @@ public class MainWindow extends JFrame {
             }
 
             String algo = (String) hashTypeComboBox.getSelectedItem();
-
             java.util.List<File> filesToHash = getAllFilesWithExtension(selectedFolder, extension);
+
             if (filesToHash.isEmpty()) {
                 log("No matching files found.");
                 return;
             }
 
-            for (File file : filesToHash) {
-                if (file.isFile() && file.getName().toLowerCase().endsWith(extension)) {
-                    try {
-                        String hashExtension = algo.toLowerCase().replace("-", "");
-                        String hashFilename = file.getAbsolutePath() + "." + hashExtension;
-                        File hashFile = new File(hashFilename);
+            progressBar.setValue(0); // reset
+            progressBar.setMaximum(filesToHash.size());
 
-                        // skips if hash already exists
-                        if (hashFile.exists()) {
-                            log("Skipped (already exists): " + hashFile.getName());
-                            continue;
+            SwingWorker<Void, Integer> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() {
+                    int processed = 0;
+
+                    for (File file : filesToHash) {
+                        try {
+                            String hashExtension = algo.toLowerCase().replace("-", "");
+                            String hashFilename = file.getAbsolutePath() + "." + hashExtension;
+                            File hashFile = new File(hashFilename);
+
+                            if (hashFile.exists()) {
+                                log("⏭️ Skipped (already exists): " + hashFile.getName());
+                            } else {
+                                String hash = computeHash(file, algo);
+                                try (java.io.FileWriter fw = new java.io.FileWriter(hashFile)) {
+                                    fw.write(algo.toUpperCase() + ": " + hash + "  " + file.getName());
+                                }
+                                log("✅ " + file.getName() + " → " + hash);
+                            }
+                        } catch (Exception ex) {
+                            log("❌ Error processing " + file.getName() + ": " + ex.getMessage());
                         }
 
-                        String hash = computeHash(file, algo);
-
-                        try (java.io.FileWriter fw = new java.io.FileWriter(hashFile)) {
-                            fw.write(algo.toUpperCase() + ": " + hash + "  " + file.getName());
-                        }
-                        log(file.getName() + " → " + hash);
-                    } catch (Exception ex) {
-                        log("Error processing : " + file.getName() + ": " + ex.getMessage());
+                        processed++;
+                        publish(processed);
                     }
+
+                    return null;
                 }
-            }
+
+                @Override
+                protected void process(java.util.List<Integer> chunks) {
+                    int latest = chunks.get(chunks.size() - 1);
+                    progressBar.setValue(latest);
+                }
+
+                @Override
+                protected void done() {
+                    log("✅ Done generating hashes.");
+                }
+            };
+
+            log("Starting hash generation...");
+            worker.execute();
         });
 
         // "Verify hashes" button action
@@ -111,44 +136,83 @@ public class MainWindow extends JFrame {
                 return;
             }
 
-            for (File file : hashFiles) {
-                if (file.isFile() && (file.getName().endsWith(".md5") || file.getName().endsWith(".sha256") || file.getName().endsWith(".sha1"))) {
-                    try {
-                        java.util.List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
-                        if (lines.isEmpty()) {
-                            log("Empty hash file: " + file.getName());
-                            continue;
+            progressBar.setValue(0);
+            progressBar.setMaximum(hashFiles.size());
+
+            SwingWorker<Void, Integer> worker = new SwingWorker<>() {
+
+                private int okCount = 0;
+                private int errorCount = 0;
+                private int totalCount = hashFiles.size();
+
+                @Override
+                protected Void doInBackground() {
+                    int processed = 0;
+
+                    for (File file : hashFiles) {
+                        try {
+                            java.util.List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
+                            if (lines.isEmpty()) {
+                                log("Empty hash file: " + file.getName());
+                                errorCount++;
+                                continue;
+                            }
+
+                            String line = lines.get(0).trim();
+                            String[] parts = line.split("[: ]+", 3);
+                            if (parts.length < 3) {
+                                log("Invalid format in: " + file.getName());
+                                errorCount++;
+                                continue;
+                            }
+
+                            String algo = parts[0];
+                            String expectedHash = parts[1];
+                            String originalFilename = parts[2];
+
+                            File originalFile = new File(file.getParentFile(), originalFilename);
+                            if (!originalFile.exists()) {
+                                log("❌ Missing file: " + originalFilename);
+                                errorCount++;
+                                continue;
+                            }
+
+                            String actualHash = computeHash(originalFile, algo);
+                            if (expectedHash.equalsIgnoreCase(actualHash)) {
+                                log("✅ " + originalFilename + " is OK.");
+                                okCount++;
+                            } else {
+                                log("❌ " + originalFilename + " is corrupted or different.");
+                                errorCount++;
+                            }
+
+                        } catch (Exception ex) {
+                            log("❌ Error verifying " + file.getName() + ": " + ex.getMessage());
+                            errorCount++;
                         }
 
-                        String line = lines.get(0).trim();
-                        String[] parts = line.split("[: ]+", 3);
-                        if (parts.length < 3) {
-                            log("Invalid format in: " + file.getName());
-                            continue;
-                        }
-
-                        String algo = parts[0]; // MD5, SHA-256,..
-                        String expectedHash = parts[1];
-                        String originalFilename = parts[2];
-
-                        File originalFile = new File(file.getParentFile(), originalFilename);
-                        if (!originalFile.exists()) {
-                            log("Missing file: " + originalFilename);
-                            continue;
-                        }
-
-                        String actualHash = computeHash(originalFile, algo);
-                        if (expectedHash.equalsIgnoreCase(actualHash)) {
-                            log(originalFilename + " is OK.");
-                        } else {
-                            log(originalFilename + " is corrupted or different.");
-                        }
-
-                    } catch (Exception ex) {
-                        log("Error verifying " + file.getName() + ": " + ex.getMessage());
+                        processed++;
+                        publish(processed);
                     }
+
+                    return null;
                 }
-            }
+
+                @Override
+                protected void process(java.util.List<Integer> chunks) {
+                    int latest = chunks.get(chunks.size() - 1);
+                    progressBar.setValue(latest);
+                }
+
+                @Override
+                protected void done() {
+                    log("✅ Done verifying hashes.");
+                    log("Summary: " + totalCount + " files checked — " + okCount + " OK, " + errorCount + " failed.");
+                }
+            };
+
+            log("Starting hash verification...");
+            worker.execute();
         });
 
         gbc.gridx = 0; gbc.gridy = 0;
@@ -180,6 +244,14 @@ public class MainWindow extends JFrame {
         setLayout(new BorderLayout());
         add(topPanel, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
+
+        // ---------- PROGRESS BAR ----------
+        progressBar = new JProgressBar();
+        progressBar.setStringPainted(true); // affiche le pourcentage
+        progressBar.setMinimum(0);
+        progressBar.setMaximum(100);
+        progressBar.setValue(0);
+        add(progressBar, BorderLayout.SOUTH);
     }
 
     // displays messages in LOG AERA)

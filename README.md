@@ -1,35 +1,49 @@
 # FileSeal
 
-Small desktop tool written in Java to generate and verify file hashes (`.md5`, `.sha256`, etc.).  
-Mainly for checking file integrity after a backup or file transfer.
+A small desktop app to generate and verify hash files for your personal files and backups.
+
+I use it mainly for my own media backups, but it works with any type of file.  
+The goal was to keep it lightweight, fast, and dead simple.
 
 ---
 
-## Why?
+## Features
 
-Originally, I just needed a simple way to check that my files were still intact — especially for personal backups of movies and TV shows stored on external drives.
+✅ Supports `MD5`, `SHA-1`, `SHA-256`  
+✅ Works on entire folders (with subfolders)  
+✅ Generates `.md5`, `.sha1`, or `.sha256` files next to the originals  
+✅ Skips files that are already hashed  
+✅ Verifies existing hash files  
+✅ Progress bar and status logs  
+✅ Clean and minimal interface (Java Swing)
 
-After a few disk issues, I started generating hashes for remuxed movies to verify their integrity over time.
-At first, it was just for my own use, but I figured it could be helpful more broadly, and for any kind of file.
+---
 
-So I decided to turn it into a small desktop app: simple, flexible, and focused on doing one thing well.
+## How it works
+
+**Hash generation**  
+You select a folder and a file type (`.mkv`, `.zip`, etc.), choose the hash algorithm, and FileSeal creates a `.md5` / `.sha256` file for each matching file.
+
+Example:
+
+```
+Waterloo.1970.mkv
+Waterloo.1970.mkv.md5
+```
+
+Each hash file contains:
+
+```
+MD5: a92dd1f581c979e8de9e024102d18a30  Waterloo.1970.mkv
+```
+
+**Hash verification**  
+You point the app to a folder, and it scans for `.md5`, `.sha1`, etc.  
+It checks if the original files are still there and if the hash still matches.
 
 ---
 
 ## Status
 
-Basic hash generation and verification are working.
-
----
-
-## TODO
-
-- [x] GUI window
-- [x] Select folder and filter by extension
-- [x] Generate `.md5` / `.sha256` files with custom format
-- [x] Verify hash files
-- [x] Scan subfolders recursively
-- [x] Check if hash files already exists
-- [ ] Progress status
-- [ ] UI improvements
-- [ ] Windows executable
+✔️ Working and stable  
+I'm still adding small features and improving the interface a bit.
