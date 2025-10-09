@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+.DS_Store
+Thumbs.db
+FileSeal_config.ini
+.venv/
+venv/
+.idea/
