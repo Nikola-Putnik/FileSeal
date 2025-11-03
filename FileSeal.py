@@ -1,4 +1,6 @@
 import os
+import sys
+from pathlib import Path
 import hashlib
 import threading
 import sqlite3
@@ -51,7 +53,11 @@ class FileSealApp:
         self.last_db = ""
 
         # Load FileSeal_config.ini if exists
-        self.config_file = os.path.join(os.path.dirname(__file__), "FileSeal_config.ini")
+        if getattr(sys, "frozen", False):
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            base_dir = os.path.dirname(__file__)
+        self.config_file = os.path.join(base_dir, "FileSeal_config.ini")
         self.config = configparser.ConfigParser()
 
         if os.path.exists(self.config_file):
