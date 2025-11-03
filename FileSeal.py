@@ -65,7 +65,7 @@ class FileSealApp:
             self.hash_alg.set("md5")
 
         # --- Zone dossier ---
-        frame_folder = ttk.LabelFrame(root, text="Folder selection", padding=10)
+        frame_folder = ttk.Labelframe(root, text="Folder selection", padding=10)
         frame_folder.pack(fill="x", padx=10, pady=5)
 
         ttk.Entry(frame_folder, textvariable=self.folder_path).pack(side="left", fill="x", expand=True, padx=(0, 5))
@@ -73,7 +73,7 @@ class FileSealApp:
         self.browse_btn.pack(side="left")
 
         # --- Zone options ---
-        frame_opts = ttk.LabelFrame(root, text="Options", padding=10)
+        frame_opts = ttk.Labelframe(root, text="Options", padding=10)
         frame_opts.pack(fill="x", padx=10, pady=5)
 
         ttk.Label(frame_opts, text="Hash algorithm:").pack(side="left", padx=(15, 0))
@@ -84,7 +84,7 @@ class FileSealApp:
         ttk.Entry(frame_opts, textvariable=self.extension, width=8).pack(side="left", fill="x", expand=True, padx=5)
 
         # --- Zone DB ---
-        frame_db = ttk.LabelFrame(root, text="Database (optional)", padding=10)
+        frame_db = ttk.Labelframe(root, text="Database (optional)", padding=10)
         frame_db.pack(fill="x", padx=10, pady=5)
 
         ttk.Label(frame_db, textvariable=self.db_path).pack(side="left", fill="x", expand=True)
@@ -94,7 +94,7 @@ class FileSealApp:
         self.db_create_btn.pack(side="left")
 
         # --- Zone actions fichiers ---
-        frame_actions = ttk.LabelFrame(root, text="Hash files actions", padding=10)
+        frame_actions = ttk.Labelframe(root, text="Hash files actions", padding=10)
         frame_actions.pack(fill="x", padx=10, pady=5)
 
         self.gen_btn = ttk.Button(frame_actions, text="Generate hash files", command=self.run_generate)
@@ -105,7 +105,7 @@ class FileSealApp:
         self.stop_btn.pack(side="left", padx=5)
 
         # --- Zone actions DB ---
-        frame_db_actions = ttk.LabelFrame(root, text="Database actions", padding=10)
+        frame_db_actions = ttk.Labelframe(root, text="Database actions", padding=10)
         frame_db_actions.pack(fill="x", padx=10, pady=5)
 
         self.db_update_btn = ttk.Button(frame_db_actions, text="Update database from hash files", command=self.run_db_update,
@@ -585,7 +585,7 @@ if __name__ == "__main__":
     # Boutons: padding uniforme
     style.configure("TButton", padding=6)
 
-    # LabelFrame: titres en gras
+    # Labelframe: titres en gras
     style.configure("TLabelframe", font=("Segoe UI", 10, "bold"))
     style.configure("TLabelframe.Label", font=("Segoe UI", 10, "bold"))
 
