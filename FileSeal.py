@@ -10,7 +10,7 @@ from tkinter import filedialog
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 # -------------------------
 # Utilities
@@ -344,7 +344,7 @@ class FileSealApp:
                 self.log_msg(f"⏩ Already exists: {hashfile}")
             else:
                 h = compute_hash(filepath, algo)
-                with open(hashfile, "w") as hf:
+                with open(hashfile, "w", encoding="utf-8") as hf:
                     filename = os.path.basename(filepath)
                     hf.write(f"{algo.upper()}: {h}  {filename}\n")
                 created += 1
@@ -384,7 +384,7 @@ class FileSealApp:
                 return
 
             try:
-                with open(path, "r") as f:
+                with open(path, "r", encoding="utf-8") as f:
                     line = f.readline().strip()
                 algo, saved_hash, filename = parse_hashfile_line(line)
                 orig_file = os.path.join(os.path.dirname(path), filename)
