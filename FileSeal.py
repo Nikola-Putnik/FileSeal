@@ -10,7 +10,7 @@ from tkinter import filedialog
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
-__version__ = "1.0.2"
+__version__ = "1.1"
 
 # -------------------------
 # Utilities
@@ -18,19 +18,38 @@ __version__ = "1.0.2"
 
 def compute_hash(filepath, algo):
     h = hashlib.new(algo)
+    chunk_size = 128 * 1024   # 128 KB
+
     with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
+        while chunk := f.read(chunk_size):
             h.update(chunk)
+
     return h.hexdigest()
 
-def parse_hashfile_line(line):
-    # expected format: "ALGO: <hex>  <filename>"
-    # Example: "MD5: a92d...  Waterloo.1970.mkv"
+def parse_hashfile_line(line, filepath=None):
     line = line.strip()
-    algo, rest = line.split(":", 1)
-    algo = algo.lower()
-    saved_hash, filename = rest.strip().split("  ")
-    return algo, saved_hash, filename
+
+    # LEGACY Format : "MD5: hash  file"
+    if ":" in line:
+        algo, rest = line.split(":", 1)
+        algo = algo.strip().lower()
+        saved_hash, filename = rest.strip().split("  ", 1)
+        return algo, saved_hash.strip(), filename.strip()
+
+    # standard Format : "hash  file"
+    saved_hash, filename = line.split("  ", 1)
+
+    ext = Path(filepath).suffix.lower() if filepath else ""
+
+    algo_map = {
+        ".md5": "md5",
+        ".sha1": "sha1",
+        ".sha256": "sha256"
+    }
+
+    algo = algo_map.get(ext, "md5")
+
+    return algo, saved_hash.strip(), filename.strip()
 
 # -------------------------
 # App
@@ -346,7 +365,7 @@ class FileSealApp:
                 h = compute_hash(filepath, algo)
                 with open(hashfile, "w", encoding="utf-8") as hf:
                     filename = os.path.basename(filepath)
-                    hf.write(f"{algo.upper()}: {h}  {filename}\n")
+                    hf.write(f"{h}  {filename}\n")
                 created += 1
                 self.log_msg(f"✅ Created: {hashfile}")
 
@@ -386,7 +405,7 @@ class FileSealApp:
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     line = f.readline().strip()
-                algo, saved_hash, filename = parse_hashfile_line(line)
+                algo, saved_hash, filename = parse_hashfile_line(line, path)
                 orig_file = os.path.join(os.path.dirname(path), filename)
             except Exception:
                 self.log_msg(f"⚠️ Invalid format: {path}")
@@ -458,7 +477,7 @@ class FileSealApp:
             try:
                 with open(path, "r") as f:
                     line = f.readline().strip()
-                algo, saved_hash, filename = parse_hashfile_line(line)
+                algo, saved_hash, filename = parse_hashfile_line(line, path)
             except Exception:
                 invalid += 1
                 self.log_msg(f"⚠️ Invalid format: {path}")

@@ -52,7 +52,7 @@ Waterloo.1970.mkv.md5
 Each hash file contains:
 
 ```
-MD5: a92dd1f581c979e8de9e024102d18a30  Waterloo.1970.mkv
+a92dd1f581c979e8de9e024102d18a30  Waterloo.1970.mkv
 ```
 
 ---
